@@ -37,12 +37,12 @@ func (d *Dumper) DumpTable(tableName string) ([]byte, error) {
 	resultFilepath := fmt.Sprintf("%s/%s.sql", d.OutDir, tableName)
 
 	args := []string{
-		"--skip-add-locks",
-		"--skip-lock-tables",
-		"--create-options",
-		"--extended-insert",
-		"--add-drop-table",
-		"--disable-keys",
+		"--create-options",   // 在 CREATE TABLE 语句中包括所有MySQL特性选项
+		"--extended-insert",  // 使用具有多个VALUES列的INSERT语法。这样使导出文件更小，并加速导入时的速度。默认为打开状态
+		"--add-drop-table",   // 每个数据表创建之前添加drop数据表语句
+		"--disable-keys",     // 这样可以更快地导入dump出来的文件，因为它是在插入所有行后创建索引的
+		"--skip-lock-tables", // 不锁定所有表
+		"--set-gtid-purged=OFF",
 		fmt.Sprintf(`--result-file=%s`, resultFilepath),
 		d.Database,
 		tableName,
@@ -83,7 +83,7 @@ func (d *Dumper) buildDumpWhere(tableName string) (string, error) {
 			var buf strings.Builder
 			for _, value := range condition.Values {
 				if buf.Len() > 0 {
-					buf.WriteString(" and ")
+					buf.WriteString(" or ")
 				}
 				buf.WriteString(condition.Column)
 				buf.WriteByte('=')
